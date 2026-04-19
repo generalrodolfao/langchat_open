@@ -1,0 +1,26 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# LangChain
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-anthropic>=0.1.0
+
+# Cache semântico
+chromadb>=0.4.0
+langchain-chroma>=0.1.0
+
+# Banco de dados
+sqlalchemy>=2.0.0
+
+# Narração de voz
+elevenlabs>=1.0.0
+
+# Dados demo
+faker>=24.0.0
+
+# Drivers de banco opcionais — instale apenas o que usar
+# psycopg2-binary>=2.9.0   # PostgreSQL
+# pymysql>=1.1.0            # MySQL

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LangChat – Prompt Tester com Banco de Dados</title>
+  <meta name="description" content="Teste prompts conectados a bancos de dados com LangChain e LangSmith. Veja queries SQL geradas, resultados e traces em tempo real." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- ── HEADER ─────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-text">
+          <span class="logo-name">LangChat</span>
+          <span class="logo-sub">Prompt Tester</span>
+        </div>
+      </div>
+      <div class="header-badges" id="headerBadges">
+        <div class="badge badge-loading">Verificando...</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN LAYOUT ────────────────────────────────────────── -->
+  <main class="layout">
+
+    <!-- ── COLUNA ESQUERDA ────────────────────────────────── -->
+    <aside class="sidebar">
+      <!-- Config card -->
+      <div class="card" id="configCard">
+        <div class="card-header">
+          <span class="card-icon">⚙️</span>
+          <span class="card-title">Configuração</span>
+        </div>
+
+        <label class="field-label">Model</label>
+        <select class="input" id="modelSelect">
+          <option value="llama3.1">Llama 3.1 (Local)</option>
+        </select>
+
+        <label class="field-label" style="margin-top:14px">Temperature</label>
+        <div class="slider-row">
+          <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0" />
+          <span class="slider-value" id="tempValue">0.0</span>
+        </div>
+
+        <label class="field-label" style="margin-top:14px">URL do Banco de Dados</label>
+        <input
+          class="input"
+          id="dbUrl"
+          type="text"
+          placeholder="sqlite:///demo.db  (padrão)"
+        />
+        <p class="field-hint">Deixe em branco para usar o banco demo SQLite.</p>
+
+        <label class="field-label" style="margin-top:14px">Nome do Run (LangSmith)</label>
+        <input class="input" id="runName" type="text" placeholder="Meu Teste #1" />
+      </div>
+
+      <!-- Tables card -->
+      <div class="card" id="tablesCard">
+        <div class="card-header">
+          <span class="card-icon">🗄️</span>
+          <span class="card-title">Tabelas do Banco</span>
+          <button class="btn-icon" id="refreshTablesBtn" title="Atualizar">↻</button>
+        </div>
+        <div id="tablesList" class="tables-list">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+
+      <!-- Quick prompts -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-icon">💡</span>
+          <span class="card-title">Prompts Rápidos</span>
+        </div>
+        <div class="quick-prompts" id="quickPrompts">
+          <button class="quick-btn">Quais são os 5 clientes com maior receita mensal?</button>
+          <button class="quick-btn">Liste os produtos com estoque abaixo de 50 unidades.</button>
+          <button class="quick-btn">Qual foi o total de vendas por cidade?</button>
+          <button class="quick-btn">Quais clientes estão inativos?</button>
+          <button class="quick-btn">Mostre os 3 produtos mais vendidos em quantidade.</button>
+          <button class="quick-btn">Qual a receita total gerada por clientes do plano Pro?</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── COLUNA CENTRAL ─────────────────────────────────── -->
+    <section class="center-col">
+      <!-- Prompt input -->
+      <div class="card prompt-card">
+        <div class="card-header">
+          <span class="card-icon">🤖</span>
+          <span class="card-title">Prompt em Linguagem Natural</span>
+        </div>
+        <textarea
+          class="prompt-textarea"
+          id="promptInput"
+          placeholder="Faça uma pergunta sobre seus dados… ex: Qual cliente gerou mais receita?"
+          rows="4"
+        ></textarea>
+        <div class="prompt-actions">
+          <span class="token-hint" id="charCounter">0 chars</span>
+          <div class="voice-controls">
+            <button class="btn-tts" id="ttsToggleBtn" title="Leitura em voz alta">
+              <span id="ttsIcon">🔊</span>
+            </button>
+            <button class="btn-mic" id="micBtn" title="Falar (pt-BR)">
+              <svg id="micIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1Z" fill="currentColor"/>
+                <path d="M19 10V12C19 15.87 15.87 19 12 19C8.13 19 5 15.87 5 12V10H3V12C3 16.92 6.72 21.02 11.5 21.45V23H12.5V21.45C17.28 21.02 21 16.92 21 12V10H19Z" fill="currentColor"/>
+              </svg>
+            </button>
+            <button class="btn-primary" id="runBtn">
+              <span class="btn-text">Executar</span>
+              <span class="btn-spinner hidden" id="btnSpinner">⟳</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result card -->
+      <div class="card result-card" id="resultCard" style="display:none">
+        <div class="card-header">
+          <span class="card-icon">✅</span>
+          <span class="card-title">Resposta</span>
+          <div class="result-metrics" id="resultMetrics"></div>
+        </div>
+        <div class="result-body" id="resultBody"></div>
+      </div>
+
+      <!-- Error card -->
+      <div class="card error-card" id="errorCard" style="display:none">
+        <div class="card-header">
+          <span class="card-icon">❌</span>
+          <span class="card-title">Erro</span>
+        </div>
+        <pre class="error-body" id="errorBody"></pre>
+      </div>
+
+      <!-- Table preview -->
+      <div class="card" id="tablePreviewCard" style="display:none">
+        <div class="card-header">
+          <span class="card-icon">📊</span>
+          <span class="card-title" id="tablePreviewTitle">Prévia da Tabela</span>
+          <button class="btn-icon" id="closePreviewBtn">✕</button>
+        </div>
+        <div class="table-wrapper" id="tablePreviewBody"></div>
+      </div>
+    </section>
+
+    <!-- ── COLUNA DIREITA ──────────────────────────────────── -->
+    <aside class="runs-col">
+      <div class="card runs-card">
+        <div class="card-header">
+          <span class="card-icon">🔭</span>
+          <span class="card-title">LangSmith Runs</span>
+          <button class="btn-icon" id="refreshRunsBtn" title="Atualizar">↻</button>
+        </div>
+        <div id="runsList" class="runs-list">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ── JARVIS VOICE OVERLAY ────────────────────────────────────── -->
+  <div class="jarvis-overlay hidden" id="jarvisOverlay">
+    <div class="jarvis-hud">
+      <div class="jarvis-ring jarvis-ring-1"></div>
+      <div class="jarvis-ring jarvis-ring-2"></div>
+      <div class="jarvis-ring jarvis-ring-3"></div>
+      <div class="jarvis-center">
+        <svg class="jarvis-mic-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1Z" fill="currentColor"/>
+          <path d="M19 10V12C19 15.87 15.87 19 12 19C8.13 19 5 15.87 5 12V10H3V12C3 16.92 6.72 21.02 11.5 21.45V23H12.5V21.45C17.28 21.02 21 16.92 21 12V10H19Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="jarvis-waveform" id="jarvisWaveform">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="jarvis-status" id="jarvisStatus">OUVINDO...</div>
+      <div class="jarvis-transcript" id="jarvisTranscript"></div>
+      <button class="jarvis-stop-btn" id="jarvisStopBtn">■ PARAR</button>
+    </div>
+  </div>
+
+  <!-- ── MODAL PREVIEW ─────────────────────────────────────── -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="modalTitle">Prévia</span>
+        <button class="btn-icon" id="closeModalBtn">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
