@@ -57,10 +57,10 @@ Na interface, cole a URL de conexão no campo **Database URL**:
 
 ```
 # PostgreSQL
-postgresql://user:senha@host:5432/banco
+postgresql://usuario:SUA_SENHA@host:5432/banco
 
 # MySQL
-mysql+pymysql://user:senha@host:3306/banco
+mysql+pymysql://usuario:SUA_SENHA@host:3306/banco
 
 # SQLite local
 sqlite:///caminho/para/banco.db
