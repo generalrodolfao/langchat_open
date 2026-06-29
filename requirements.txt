@@ -24,3 +24,7 @@ faker>=24.0.0
 # Drivers de banco opcionais — instale apenas o que usar
 # psycopg2-binary>=2.9.0   # PostgreSQL
 # pymysql>=1.1.0            # MySQL
+
+# Ollama (local LLM)
+langchain-ollama>=0.1.0
+langsmith>=0.1.0
